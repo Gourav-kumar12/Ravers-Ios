@@ -1,0 +1,1 @@
+- [Raverse code review notes](raverse-code-review.md) — recurring bug patterns (asset-name drift, model/UI mismatch) + conventions in THE RAVERS iOS app
