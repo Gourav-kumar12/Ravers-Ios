@@ -7,6 +7,7 @@
 import SwiftUI
 
 struct PartyView: View {
+    @Environment(ProfileViewModel.self) private var profileModel
     @State private var model = PartyViewModel()
     @State private var savedIDs: Set<String> = []
 
@@ -82,7 +83,7 @@ struct PartyView: View {
 
     private var eventList: some View {
         LazyVStack(spacing: 18) {
-            ForEach(model.filteredEvents) { event in
+            ForEach(publishedEvents) { event in
                 NavigationLink {
                     EventDetailView(event: event)
                 } label: {
@@ -101,10 +102,41 @@ struct PartyView: View {
         if savedIDs.contains(event.id) { savedIDs.remove(event.id) }
         else { savedIDs.insert(event.id) }
     }
+
+    /// A rave shared from Edit Profile appears at the top of the Party feed.
+    private var publishedEvents: [Event] {
+        guard let profile = profileModel.profile,
+              profile.isHostingRave,
+              !profile.hostedRaveName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !profile.hostedRaveVenue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return model.filteredEvents
+        }
+
+        let hostEvent = Event(
+            id: "hosted-rave-\(profile.id)",
+            name: profile.hostedRaveName.uppercased(),
+            venue: profile.hostedRaveVenue,
+            city: profile.city,
+            distanceKm: nil,
+            date: profile.hostedRaveDate,
+            genres: profile.genres.isEmpty ? ["House"] : profile.genres,
+            fromPrice: 0,
+            imageName: "party-1",
+            passes: [],
+            about: profile.hostedRaveDetails.isEmpty ? "Hosted by \(profile.displayName)." : profile.hostedRaveDetails,
+            aboutTitle: "HOSTED RAVE"
+        )
+
+        guard model.selectedGenre == "All" || hostEvent.genres.contains(model.selectedGenre) else {
+            return model.filteredEvents
+        }
+        return [hostEvent] + model.filteredEvents
+    }
 }
 
 #Preview {
     NavigationStack {
         PartyView()
     }
+    .environment(ProfileViewModel())
 }

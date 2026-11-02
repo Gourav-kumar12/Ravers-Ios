@@ -14,7 +14,7 @@ struct PartnerLockedView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 28) {
                     emblem
-                    heading
+//                    heading
                     perks
                     unlockCard
                     footnote
@@ -43,20 +43,21 @@ struct PartnerLockedView: View {
     // MARK: - Emblem + wordmark
 
     private var emblem: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "crown.fill")
-                .font(.system(size: 30, weight: .bold))
+        VStack(spacing: 1) {
+            Image("subscription-logo")
+                .resizable()
+                .scaledToFit()
                 .foregroundStyle(.white)
-                .frame(width: 92, height: 92)
-                .background(
-                    LinearGradient(colors: [Color.rvRed, Color.rvRedDeep],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing),
-                    in: RoundedRectangle(cornerRadius: 28, style: .continuous)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                )
+                .frame(width: 180, height: 180)
+//                .background(
+//                    LinearGradient(colors: [Color.rvRed, Color.rvRedDeep],
+//                                   startPoint: .topLeading, endPoint: .bottomTrailing),
+//                    in: RoundedRectangle(cornerRadius: 28, style: .continuous)
+//                )
+//                .overlay(
+//                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+//                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+//                )
                 .shadow(color: Color.rvRed.opacity(0.55), radius: 26, y: 10)
 
             HStack(spacing: 8) {
@@ -79,17 +80,7 @@ struct PartnerLockedView: View {
 
     // MARK: - Heading
 
-    private var heading: some View {
-        VStack(spacing: 12) {
-            Text("The floor knows\nits own")
-                .font(.system(size: 30, weight: .heavy))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-                .lineSpacing(2)
-
-           
-        }
-    }
+   
 
     // MARK: - Perks
 

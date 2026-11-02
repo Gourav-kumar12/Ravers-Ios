@@ -19,6 +19,7 @@ struct ProductDetailView: View {
     @State private var showVaultToast = false
     @State private var goToVault = false
     @State private var showCheckout = false
+    @State private var errorMessage: String?
 
     private var sizes: [String] { product.sizes ?? [] }
     private var specs: [String] { product.specs ?? [] }
@@ -62,10 +63,13 @@ struct ProductDetailView: View {
         .navigationDestination(isPresented: $goToVault) {
             VaultView()
         }
+        .alert("Couldn't update Vault", isPresented: Binding(
+            get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } }
+        )) { Button("OK", role: .cancel) { } } message: { Text(errorMessage ?? "") }
         .fullScreenCover(isPresented: $showCheckout) {
             CheckoutFlowView(product: product, size: selectedSize, quantity: 1) {
                 showCheckout = false
-            }
+            } onOrderCompleted: { }
         }
     }
 
@@ -104,8 +108,13 @@ struct ProductDetailView: View {
         .padding(.horizontal, 16)
     }
 
-    private func addToVault() {
-        vault.add(product, size: selectedSize)
+    private func addToVault() async {
+        do {
+            try await vault.add(product, size: selectedSize)
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
 
         // Flash the confirmation toast, then slide into the Vault.
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
@@ -314,9 +323,9 @@ struct ProductDetailView: View {
         HStack(spacing: 12) {
             // Secondary: drop into the cart.
             Button {
-                addToVault()
+                Task { await addToVault() }
             } label: {
-                Text("addToVault")
+                Text("ADD TO VAULT")
                     .font(.system(size: 14, weight: .bold))
                     .tracking(0.6)
                     .foregroundStyle(.white)
@@ -340,6 +349,7 @@ struct ProductDetailView: View {
             }
             .buttonStyle(.plain)
         }
+        .disabled(vault.isBusy)
         .padding(.horizontal, 18)
         .padding(.top, 12)
         .padding(.bottom, 8)

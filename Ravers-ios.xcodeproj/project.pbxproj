@@ -6,6 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		35B9F076306481630026B499 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 35B9F075306481630026B499 /* Auth */; };
+		35B9F078306481630026B499 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 35B9F077306481630026B499 /* Functions */; };
+		35B9F07A306481630026B499 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 35B9F079306481630026B499 /* PostgREST */; };
+		35B9F07C306481630026B499 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 35B9F07B306481630026B499 /* Realtime */; };
+		35B9F07E306481630026B499 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 35B9F07D306481630026B499 /* Storage */; };
+		35B9F080306481630026B499 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 35B9F07F306481630026B499 /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		35522CF0302359DE00BA644B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +36,7 @@
 		35522CE0302359DC00BA644B /* Ravers-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ravers-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		35522CEF302359DE00BA644B /* Ravers-iosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Ravers-iosTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		35522CF9302359DE00BA644B /* Ravers-iosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Ravers-iosUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9AB2D1000000000000000001 /* Ravers-ios/Core/Supabase/Secrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Ravers-ios/Core/Supabase/Secrets.example.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -52,6 +62,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				35B9F07A306481630026B499 /* PostgREST in Frameworks */,
+				35B9F078306481630026B499 /* Functions in Frameworks */,
+				35B9F080306481630026B499 /* Supabase in Frameworks */,
+				35B9F076306481630026B499 /* Auth in Frameworks */,
+				35B9F07E306481630026B499 /* Storage in Frameworks */,
+				35B9F07C306481630026B499 /* Realtime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,6 +95,7 @@
 				35522CF2302359DE00BA644B /* Raverse-iosTests */,
 				35522CFC302359DE00BA644B /* Raverse-iosUITests */,
 				35522CE1302359DC00BA644B /* Products */,
+				9AB2D1000000000000000001 /* Ravers-ios/Core/Supabase/Secrets.example.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -112,6 +129,12 @@
 			);
 			name = "Ravers-ios";
 			packageProductDependencies = (
+				35B9F075306481630026B499 /* Auth */,
+				35B9F077306481630026B499 /* Functions */,
+				35B9F079306481630026B499 /* PostgREST */,
+				35B9F07B306481630026B499 /* Realtime */,
+				35B9F07D306481630026B499 /* Storage */,
+				35B9F07F306481630026B499 /* Supabase */,
 			);
 			productName = "Raverse-ios";
 			productReference = 35522CE0302359DC00BA644B /* Ravers-ios.app */;
@@ -195,6 +218,9 @@
 			);
 			mainGroup = 35522CD7302359DC00BA644B;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				35B9F074306481630026B499 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 35522CE1302359DC00BA644B /* Products */;
 			projectDirPath = "";
@@ -269,6 +295,143 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		35358DFC306D2BD500686A8B /* Debug copy */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = "Debug copy";
+		};
+		35358DFD306D2BD500686A8B /* Debug copy */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9AB2D1000000000000000001 /* Ravers-ios/Core/Supabase/Secrets.example.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P7F673T74G;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Ravers-ios-Info.plist";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.xcode.Raverse-ios";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Debug copy";
+		};
+		35358DFE306D2BD500686A8B /* Debug copy */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.xcode.Raverse-iosTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ravers-ios.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Ravers-ios";
+			};
+			name = "Debug copy";
+		};
+		35358DFF306D2BD500686A8B /* Debug copy */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.xcode.Raverse-iosUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Raverse-ios";
+			};
+			name = "Debug copy";
+		};
 		35522D01302359DE00BA644B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -390,6 +553,7 @@
 		};
 		35522D04302359DE00BA644B /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9AB2D1000000000000000001 /* Ravers-ios/Core/Supabase/Secrets.example.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -398,6 +562,7 @@
 				DEVELOPMENT_TEAM = P7F673T74G;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Ravers-ios-Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -422,6 +587,7 @@
 		};
 		35522D05302359DE00BA644B /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9AB2D1000000000000000001 /* Ravers-ios/Core/Supabase/Secrets.example.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -430,6 +596,7 @@
 				DEVELOPMENT_TEAM = P7F673T74G;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Ravers-ios-Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -539,6 +706,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				35522D01302359DE00BA644B /* Debug */,
+				35358DFC306D2BD500686A8B /* Debug copy */,
 				35522D02302359DE00BA644B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -548,6 +716,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				35522D04302359DE00BA644B /* Debug */,
+				35358DFD306D2BD500686A8B /* Debug copy */,
 				35522D05302359DE00BA644B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -557,6 +726,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				35522D07302359DE00BA644B /* Debug */,
+				35358DFE306D2BD500686A8B /* Debug copy */,
 				35522D08302359DE00BA644B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -566,12 +736,57 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				35522D0A302359DE00BA644B /* Debug */,
+				35358DFF306D2BD500686A8B /* Debug copy */,
 				35522D0B302359DE00BA644B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		35B9F074306481630026B499 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		35B9F075306481630026B499 /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 35B9F074306481630026B499 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		35B9F077306481630026B499 /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 35B9F074306481630026B499 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		35B9F079306481630026B499 /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 35B9F074306481630026B499 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		35B9F07B306481630026B499 /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 35B9F074306481630026B499 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		35B9F07D306481630026B499 /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 35B9F074306481630026B499 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		35B9F07F306481630026B499 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 35B9F074306481630026B499 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 35522CD8302359DC00BA644B /* Project object */;
 }

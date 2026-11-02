@@ -21,8 +21,10 @@ enum ProfileRoute: Hashable {
 
 struct ProfileView: View {
     @Environment(VaultStore.self) private var vault
-    @State private var model = ProfileViewModel()
+    @Environment(ProfileViewModel.self) private var model
+    @Environment(AuthViewModel.self) private var auth
     @State private var showEditProfile = false
+    @State private var showHostRave = false
     @State private var ticket: UpcomingPass?
     /// Which account-menu screen to push, if any.
     @State private var route: ProfileRoute?
@@ -34,10 +36,22 @@ struct ProfileView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 22) {
+                        if model.isLoading {
+                            HStack(spacing: 8) {
+                                ProgressView().tint(Color.rvRed)
+                                Text("Loading your profile…")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(Color.rvTextMuted)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                         header
-                        emailPrompt
+                        if shouldShowContactPrompt {
+                            emailPrompt
+                        }
                         statsRow
                         upcomingSection
+                        hostRaveCard
     
                         SettingsCard(model: model)
                         menuList
@@ -52,6 +66,9 @@ struct ProfileView: View {
             .navigationDestination(isPresented: $showEditProfile) {
                 EditProfileView(model: model)
             }
+            .navigationDestination(isPresented: $showHostRave) {
+                HostRaveView(model: model)
+            }
             .navigationDestination(item: $route) { route in
                 switch route {
                 case .helpSupport:      HelpSupportView()
@@ -63,7 +80,16 @@ struct ProfileView: View {
                     .presentationDetents([.medium, .large])
             }
         }
-        .task { await model.load() }
+        .task { await model.load(forceRefresh: true) }
+        .onChange(of: model.settings) { _, _ in model.scheduleSettingsSave() }
+        .alert("Profile sync issue", isPresented: Binding(
+            get: { model.errorMessage != nil },
+            set: { if !$0 { model.errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { model.errorMessage = nil }
+        } message: {
+            Text(model.errorMessage ?? "")
+        }
     }
 
     // MARK: - Stats (Parties / Pieces owned / Crew)
@@ -147,6 +173,46 @@ struct ProfileView: View {
         )
     }
 
+    // MARK: - Host a Rave
+
+    private var hostRaveCard: some View {
+        Button { showHostRave = true } label: {
+            HStack(alignment: .center, spacing: 14) {
+                Image(systemName: "music.mic.circle.fill")
+                    .font(.system(size: 28, weight: .medium))
+                    .foregroundStyle(Color.rvRed)
+                    .frame(width: 88, height: 88)
+                    .background(Color.rvRed.opacity(0.14), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("HOST A RAVE")
+                        .font(.system(size: 17, weight: .heavy, design: .monospaced))
+                        .tracking(0.8)
+                        .foregroundStyle(Color.rvText)
+                    Text(model.profile?.isHostingRave == true ? "Your rave is live in Party." : "Share a party with the Raverse community.")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.rvTextMuted)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.rvTextMuted)
+            }
+            .padding(16)
+            .background(
+                LinearGradient(colors: [Color.rvSurface, Color.rvRed.opacity(0.11)],
+                               startPoint: .leading, endPoint: .trailing),
+                in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+            )
+            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.rvRed.opacity(0.32), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(model.profile == nil || model.isLoading)
+    }
+
     // MARK: - Been there
 
 
@@ -200,7 +266,11 @@ struct ProfileView: View {
 
     private var avatar: some View {
         Group {
-            if let name = model.profile?.avatarName {
+            if let data = model.profile?.primaryPhoto, let image = UIImage(data: data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else if let name = model.profile?.avatarName {
                 Image(name)
                     .resizable()
                     .scaledToFill()
@@ -217,6 +287,12 @@ struct ProfileView: View {
     }
 
     // MARK: - Email prompt (accented top card)
+
+    private var shouldShowContactPrompt: Bool {
+        let email = model.profile?.email.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let phone = model.profile?.phone.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return email.isEmpty || phone.isEmpty
+    }
 
     private var emailPrompt: some View {
         let email = model.profile?.email ?? ""
@@ -285,7 +361,7 @@ struct ProfileView: View {
 
     private var signOutButton: some View {
         Button {
-            // Sign out action.
+            Task { await auth.signOut() }
         } label: {
             Text("Sign out")
                 .font(.system(size: 15, weight: .bold))
@@ -550,4 +626,6 @@ private struct TicketQRView: View {
 #Preview {
     ProfileView()
         .environment(VaultStore())
+        .environment(ProfileViewModel())
+        .environment(AuthViewModel())
 }

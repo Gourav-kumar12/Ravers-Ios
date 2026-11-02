@@ -1,271 +1,158 @@
-
 import SwiftUI
-import PhotosUI
 
 struct PartnerView: View {
-    @State private var model = PartnerViewModel()
-
-    // Photo picker selections — loaded into the model as Data on change.
-    @State private var pick1: PhotosPickerItem?
-    @State private var pick2: PhotosPickerItem?
-    @State private var showDiscovery = false
+    var goToProfile: () -> Void = {}
+    @Environment(MatchStore.self) private var store
+    @Environment(ProfileViewModel.self) private var profile
+    @State private var openChat: RaverProfile?
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color.rvBackground.ignoresSafeArea()
-
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 26) {
-                        intro
-                        progressBar
-                        photosSection
-                        chipSection("GENRES YOU LIVE IN", options: model.genreOptions, selection: \.genres)
-                        chipSection("ARTISTS AND DJS", options: model.artistOptions, selection: \.artists)
-                        chipSection("PARTY STYLES", options: model.partyStyleOptions, selection: \.partyStyles)
-                        continueButton
-                        lockNote
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    HStack(alignment: .center) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("FIND YOUR CREW").font(.system(size: 28, weight: .black))
+                            Text("Same music. New connections.").foregroundStyle(Color.rvTextMuted)
+                        }
+                        Spacer(minLength: 8)
+                        NavigationLink {
+                            MatchesInboxView()
+                        } label: {
+                            VStack(spacing: 5) {
+                                Image(systemName: "person.2.fill").font(.title3)
+                                Text("\(store.matches.count) matches").font(.caption)
+                            }
+                            .padding(12).background(Color.rvSurface, in: RoundedRectangle(cornerRadius: 16))
+                        }
+                        .accessibilityLabel("View matches, \(store.matches.count)")
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
-                    .padding(.bottom, 32)
-                }
-                .frame(maxWidth: 440)
-            }
-            .navigationDestination(isPresented: $showDiscovery) {
-                NearbyRaversView()
-            }
-        }
-        .task { await model.load() }
-        .onChange(of: pick1) { _, item in load(item, into: \.photo1) }
-        .onChange(of: pick2) { _, item in load(item, into: \.photo2) }
-    }
-
-    // MARK: - Intro
-
-    private var intro: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("RAVE SYNC")
-                .font(.system(size: 30, weight: .heavy))
-                .tracking(1)
-                .foregroundStyle(Color.rvText)
-            Text("Set your frequency before you scan. Rave Sync runs on taste, never on looks.")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Color.rvTextMuted)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    // MARK: - Progress meter
-
-    private var progressBar: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.rvSurface)
-                    Capsule()
-                        .fill(LinearGradient(colors: [.rvRed, .rvRedDeep],
-                                             startPoint: .leading, endPoint: .trailing))
-                        .frame(width: geo.size.width * CGFloat(model.tunedCount) / CGFloat(model.totalSteps))
-                }
-            }
-            .frame(height: 6)
-
-            Text("\(model.tunedCount) OF \(model.totalSteps) TUNED")
-                .font(.system(size: 11, weight: .heavy, design: .monospaced))
-                .tracking(1.5)
-                .foregroundStyle(Color.rvTextMuted)
-        }
-    }
-
-    // MARK: - Two clear photos
-
-    private var photosSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionTitle("TWO CLEAR PHOTOS")
-            Text("Both slots are required before discovery opens. Face the light, strobes do the rest.")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Color.rvTextMuted)
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: 14) {
-                photoSlot(index: 1, data: model.photo1, pick: $pick1)
-                photoSlot(index: 2, data: model.photo2, pick: $pick2)
-            }
-        }
-    }
-
-    private func photoSlot(index: Int, data: Data?, pick: Binding<PhotosPickerItem?>) -> some View {
-        PhotosPicker(selection: pick, matching: .images, photoLibrary: .shared()) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.rvSurface)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(data == nil ? Color.rvRed.opacity(0.4) : Color.rvBorder,
-                                    style: StrokeStyle(lineWidth: 1.5, dash: data == nil ? [6] : []))
-                    )
-
-                if let data, let image = UIImage(data: data) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                } else {
-                    VStack(spacing: 10) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 26, weight: .regular))
-                            .foregroundStyle(Color.rvText)
-                        Text("Photo \(index)")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Color.rvText)
-                        Text("REQUIRED")
-                            .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                            .tracking(1.5)
+                    if !profile.isLoading && (profile.ghostMode || profile.profile?.displayName.isEmpty != false) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Let your crew find you").font(.headline)
+                            Text("Complete your profile and turn off Ghost mode so other members can swipe on you.")
+                                .font(.footnote).foregroundStyle(Color.rvTextMuted)
+                            Button("Update my profile", action: goToProfile).font(.subheadline.bold())
+                        }
+                    }
+                    if let error = store.errorMessage {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(error).font(.footnote).foregroundStyle(Color.rvTextMuted)
+                            Button("Retry live discovery") { Task { await store.load() } }
+                        }
+                    }
+                    if let matched = store.lastMatch {
+                        Button { openChat = matched; store.lastMatch = nil } label: {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Label("You matched with \(matched.name)", systemImage: "sparkles").font(.headline)
+                                Text("Chat unlocks 3 hours after matching. View your connection.").font(.footnote)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading).padding(16)
+                            .background(Color.rvRed.opacity(0.12), in: RoundedRectangle(cornerRadius: 16))
+                        }
+                        .buttonStyle(.plain)
+                    } else if let notice = store.notice {
+                        Text(notice).font(.footnote).foregroundStyle(Color.rvTextMuted)
+                    }
+                    if store.showingSamples {
+                        Label("SAMPLE PROFILES", systemImage: "sparkles")
+                            .font(.system(size: 11, weight: .bold, design: .monospaced)).tracking(1)
                             .foregroundStyle(Color.rvRed)
+                        Text("Try swiping with sample ravers. Real profiles appear here when other members are discoverable.")
+                            .font(.footnote).foregroundStyle(Color.rvTextMuted)
                     }
+                    if let raver = store.topCandidate {
+                        SwipeRaverCard(raver: raver, isBusy: store.isBusy,
+                                       onPass: { Task { await store.pass(raver) } },
+                                       onLike: { Task { await store.like(raver) } })
+                            .id(raver.id)
+                    } else {
+                        ContentUnavailableView("You're all caught up", systemImage: "waveform",
+                                               description: Text("Check back for new ravers, or explore your matches."))
+                        Button("Try sample profiles again") { store.resetSamplePasses() }
+                    }
+                    if store.isBusy { ProgressView().frame(maxWidth: .infinity).tint(.rvRed) }
+                    Text("Real connections need two right swipes. Messages unlock 3 hours after a mutual match.")
+                        .font(.footnote).foregroundStyle(Color.rvTextMuted)
+                }
+                .padding(18).frame(maxWidth: 480)
+            }
+            .background(Color.rvBackground).foregroundStyle(Color.rvText)
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(item: $openChat) { ChatView(raver: $0) }
+            .refreshable { await store.load() }
+            .task {
+                while !Task.isCancelled {
+                    await store.load()
+                    do { try await Task.sleep(for: .seconds(8)) } catch { break }
                 }
             }
-            .frame(height: 150)
-            .frame(maxWidth: .infinity)
         }
     }
+}
 
-    // MARK: - Chip sections
+private struct SwipeRaverCard: View {
+    let raver: RaverProfile
+    let isBusy: Bool
+    let onPass: () -> Void
+    let onLike: () -> Void
+    @State private var dragX: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private func chipSection(
-        _ title: String,
-        options: [String],
-        selection: ReferenceWritableKeyPath<PartnerViewModel, Set<String>>
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionTitle(title)
-            ChipFlowLayout(spacing: 10) {
-                ForEach(options, id: \.self) { option in
-                    chip(option, selected: model[keyPath: selection].contains(option)) {
-                        model.toggle(option, in: selection)
+    var body: some View {
+        VStack(spacing: 18) {
+            ZStack(alignment: .bottomLeading) {
+                RaverPortrait(raver: raver)
+                LinearGradient(colors: [.clear, .black.opacity(0.95)], startPoint: .center, endPoint: .bottom)
+                VStack(alignment: .leading, spacing: 10) {
+                    if abs(dragX) > 30 {
+                        Text(dragX > 0 ? "LIKE" : "PASS").font(.title.bold())
+                            .foregroundStyle(dragX > 0 ? Color.green : Color.rvRed)
                     }
+                    HStack {
+                        Text(raver.name + (raver.age > 0 ? ", \(raver.age)" : ""))
+                            .font(.system(size: 30, weight: .heavy))
+                        if raver.isDemo { Text("SAMPLE").font(.caption.bold()).padding(6).background(.white.opacity(0.15), in: Capsule()) }
+                    }
+                    if let city = raver.city, !city.isEmpty { Label(city, systemImage: "mappin").font(.subheadline) }
+                    Text(raver.genres.joined(separator: " · ")).font(.subheadline.bold()).foregroundStyle(Color.rvRed)
+                    if !raver.artists.isEmpty { Text(raver.artists.joined(separator: " · ")).font(.footnote) }
+                    if !raver.bio.isEmpty { Text(raver.bio).font(.subheadline).lineLimit(4) }
                 }
+                .padding(22)
             }
-        }
-    }
-
-    private func chip(_ text: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(text)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(selected ? .black : Color.rvText)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
-                .background(selected ? Color.rvRed : Color.rvSurface,
-                            in: Capsule())
-                .overlay(
-                    Capsule().stroke(selected ? Color.rvRed : Color.rvBorder, lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Continue + lock note
-
-    private var continueButton: some View {
-        Button {
-            // Unlock discovery once both photos are added.
-            showDiscovery = true
-        } label: {
-            Text(model.bothPhotosAdded ? "OPEN DISCOVERY" : "ADD BOTH PHOTOS TO CONTINUE")
-                .font(.system(size: 14, weight: .bold))
-                .tracking(0.8)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 54)
-                .background(model.bothPhotosAdded ? Color.rvRed : Color.rvRed.opacity(0.4),
-                            in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .disabled(!model.bothPhotosAdded)
-        .padding(.top, 6)
-    }
-
-    private var lockNote: some View {
-        Text("DISCOVERY STAYS LOCKED UNTIL YOUR FREQUENCY IS SET")
-            .font(.system(size: 10, weight: .semibold, design: .monospaced))
-            .tracking(1.2)
-            .foregroundStyle(Color.rvTextMuted)
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - Helpers
-
-    private func sectionTitle(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 13, weight: .heavy, design: .monospaced))
-            .tracking(1.5)
-            .foregroundStyle(Color.rvText)
-    }
-
-    /// Loads a picked photo into the model as JPEG data.
-    private func load(_ item: PhotosPickerItem?, into keyPath: ReferenceWritableKeyPath<PartnerViewModel, Data?>) {
-        guard let item else { return }
-        Task {
-            if let data = try? await item.loadTransferable(type: Data.self) {
-                await MainActor.run { model[keyPath: keyPath] = data }
+            .foregroundStyle(.white).frame(height: 420)
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .offset(x: reduceMotion ? 0 : dragX)
+            .rotationEffect(.degrees(reduceMotion ? 0 : Double(dragX / 24)))
+            .gesture(DragGesture(minimumDistance: 20)
+                .onChanged { value in
+                    if !isBusy, abs(value.translation.width) > abs(value.translation.height) { dragX = value.translation.width }
+                }
+                .onEnded { value in
+                    if !isBusy, abs(value.translation.width) > abs(value.translation.height) {
+                        if value.translation.width > 80 { onLike() }
+                        else if value.translation.width < -80 { onPass() }
+                    }
+                    withAnimation(.easeOut(duration: 0.2)) { dragX = 0 }
+                })
+            HStack(spacing: 32) {
+                action("Pass", icon: "xmark", color: .rvTextMuted, perform: onPass)
+                Text("LEFT TO PASS\nRIGHT TO LIKE").font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .multilineTextAlignment(.center).foregroundStyle(Color.rvTextMuted)
+                action("Like", icon: "heart.fill", color: .rvRed, perform: onLike)
             }
+            .disabled(isBusy)
         }
+    }
+    private func action(_ title: String, icon: String, color: Color, perform: @escaping () -> Void) -> some View {
+        Button(action: perform) {
+            Image(systemName: icon).font(.title2.bold()).foregroundStyle(color)
+                .frame(width: 62, height: 62).background(Color.rvSurface, in: Circle())
+                .overlay(Circle().stroke(color.opacity(0.45), lineWidth: 1))
+        }
+        .buttonStyle(.plain).accessibilityLabel("\(title) \(raver.name)")
     }
 }
 
-// MARK: - Flow layout (wrapping chips)
-
-/// A simple wrapping layout that flows its subviews left-to-right, moving to a
-/// new line when the current row runs out of width. Used for the taste chips.
-private struct ChipFlowLayout: Layout {
-    var spacing: CGFloat = 10
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? .infinity
-        var rowWidth: CGFloat = 0
-        var rowHeight: CGFloat = 0
-        var totalHeight: CGFloat = 0
-        var totalWidth: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if rowWidth + size.width > maxWidth, rowWidth > 0 {
-                totalHeight += rowHeight + spacing
-                totalWidth = max(totalWidth, rowWidth - spacing)
-                rowWidth = 0
-                rowHeight = 0
-            }
-            rowWidth += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
-        totalHeight += rowHeight
-        totalWidth = max(totalWidth, rowWidth - spacing)
-        return CGSize(width: totalWidth, height: totalHeight)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.minX
-        var y = bounds.minY
-        var rowHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > bounds.maxX, x > bounds.minX {
-                x = bounds.minX
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
-    }
-}
-
-#Preview {
-    PartnerView()
-        .environment(MatchStore())
-}
+#Preview { PartnerView().environment(MatchStore()).environment(ProfileViewModel()) }

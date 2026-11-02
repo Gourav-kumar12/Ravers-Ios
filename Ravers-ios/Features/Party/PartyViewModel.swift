@@ -29,9 +29,8 @@ final class PartyViewModel {
     private static var sampleEvents: [Event] {
         let cal = Calendar.current
         func date(_ day: Int) -> Date {
-            var c = DateComponents()
-            c.year = 2026; c.month = 8; c.day = day; c.hour = 22
-            return cal.date(from: c) ?? .now
+            let upcoming = cal.date(byAdding: .day, value: day, to: .now) ?? .now
+            return cal.date(bySettingHour: 22, minute: 0, second: 0, of: upcoming) ?? upcoming
         }
         return [
             Event(

@@ -8,7 +8,7 @@
 import Foundation
 
 struct UserProfile: Identifiable, Codable, Hashable {
-    let id: String
+    var id: String
     var displayName: String     // "REHAN MALHOTRA"
     var handle: String          // "@rehan.wav"
     var email: String           // "rehan@raverse.app"
@@ -16,6 +16,18 @@ struct UserProfile: Identifiable, Codable, Hashable {
     var city: String
     var memberSince: String     // "March 2025"
     var avatarName: String
+    /// Primary photo (JPEG data). When set, it's used as the profile avatar.
+    var primaryPhoto: Data? = nil
+    var primaryPhotoPath: String? = nil
+    /// Secondary photo (JPEG data). Both photos must be set to appear in discovery.
+    var secondaryPhoto: Data? = nil
+    var secondaryPhotoPath: String? = nil
+    /// Host-submitted party details, shown in the Party feed when sharing is enabled.
+    var isHostingRave: Bool = false
+    var hostedRaveName: String = ""
+    var hostedRaveDate: Date = .now
+    var hostedRaveVenue: String = ""
+    var hostedRaveDetails: String = ""
     var personality: String     // one of RaverPersonality, e.g. "Night Owl"
     var genres: [String]        // music taste — ["Techno", "Melodic Techno", ...]
     var venues: [String]        // preferred vibes — ["Club", "Indoor", "Home", ...]

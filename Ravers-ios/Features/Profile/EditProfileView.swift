@@ -1,6 +1,7 @@
 
 
 import SwiftUI
+import PhotosUI
 
 struct EditProfileView: View {
     /// The shared profile model. On save we write `draft` back into it.
@@ -10,11 +11,14 @@ struct EditProfileView: View {
 
     /// Local, editable copy so changes only commit on Save.
     @State private var draft: UserProfile
+    @State private var primaryPhotoPicker: PhotosPickerItem?
+    @State private var secondaryPhotoPicker: PhotosPickerItem?
+    @State private var saveError: String?
 
     init(model: ProfileViewModel) {
         self.model = model
         _draft = State(initialValue: model.profile ?? UserProfile(
-            id: "me", displayName: "", handle: "@", email: "", phone: "",
+            id: "", displayName: "", handle: "", email: "", phone: "",
             city: "", memberSince: "", avatarName: "", personality: "",
             genres: [], venues: [], favoriteArtists: [],
             partiesCount: 0, piecesOwned: 0, crewCount: 0
@@ -30,9 +34,12 @@ struct EditProfileView: View {
                     topBar
                     headerPreview
                     detailsSection
+                    photosSection
                     personalitySection
                     musicTasteSection
-                    venueSection
+                    artistsSection
+                    partyStyleSection
+
                     saveButton
                 }
                 .padding(.horizontal, 18)
@@ -42,6 +49,20 @@ struct EditProfileView: View {
             .frame(maxWidth: 440)
         }
         .toolbar(.hidden, for: .navigationBar)
+        .onChange(of: primaryPhotoPicker) { _, item in
+            loadPhoto(item, into: \.primaryPhoto)
+        }
+        .onChange(of: secondaryPhotoPicker) { _, item in
+            loadPhoto(item, into: \.secondaryPhoto)
+        }
+        .alert("Couldn't save profile", isPresented: Binding(
+            get: { saveError != nil },
+            set: { if !$0 { saveError = nil } }
+        )) {
+            Button("OK", role: .cancel) { saveError = nil }
+        } message: {
+            Text(saveError ?? "")
+        }
     }
 
     // MARK: - Top bar (back + Save)
@@ -66,15 +87,17 @@ struct EditProfileView: View {
 
             Spacer()
 
-            Button { save() } label: {
-                Text("Save")
+            Button { Task { await save() } } label: {
+                Text(model.isSaving ? "Saving…" : "Save")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(Color.rvRed)
                     .frame(width: 52, height: 40)
             }
             .buttonStyle(.plain)
+            .disabled(model.isSaving)
         }
     }
+
 
     // MARK: - Live header preview (matches the design reference)
 
@@ -89,7 +112,7 @@ struct EditProfileView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
 
-                Text("\(draft.handle) · since \(draft.memberSince)")
+                Text("\(formattedHandle) · since \(draft.memberSince)")
                     .font(.system(size: 13, weight: .regular, design: .monospaced))
                     .foregroundStyle(Color.rvTextMuted)
 
@@ -120,7 +143,9 @@ struct EditProfileView: View {
 
     private var avatar: some View {
         Group {
-            if UIImage(named: draft.avatarName) != nil {
+            if let data = draft.primaryPhoto, let image = UIImage(data: data) {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else if UIImage(named: draft.avatarName) != nil {
                 Image(draft.avatarName).resizable().scaledToFill()
             } else {
                 Image(systemName: "person.fill")
@@ -143,6 +168,70 @@ struct EditProfileView: View {
         }
     }
 
+    private var formattedHandle: String {
+        let handle = draft.handle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !handle.isEmpty else { return "@yourhandle" }
+        return handle.hasPrefix("@") ? handle : "@\(handle)"
+    }
+
+    // MARK: - Partner photos
+
+    private var photosSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("PROFILE PHOTOS")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Color.rvTextMuted)
+            Text("Add two clear photos. Both are required to appear in Partner matching.")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.rvTextMuted.opacity(0.7))
+
+            HStack(spacing: 14) {
+                photoSlot(title: "Photo 1", data: draft.primaryPhoto, selection: $primaryPhotoPicker)
+                photoSlot(title: "Photo 2", data: draft.secondaryPhoto, selection: $secondaryPhotoPicker)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func photoSlot(
+        title: String,
+        data: Data?,
+        selection: Binding<PhotosPickerItem?>
+    ) -> some View {
+        PhotosPicker(selection: selection, matching: .images, photoLibrary: .shared()) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.rvSurface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(data == nil ? Color.rvRed.opacity(0.45) : Color.rvBorder,
+                                    style: StrokeStyle(lineWidth: 1.5, dash: data == nil ? [6] : []))
+                    )
+
+                if let data, let image = UIImage(data: data) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                } else {
+                    VStack(spacing: 7) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 22, weight: .medium))
+                        Text(title)
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("REQUIRED")
+                            .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                            .tracking(1)
+                            .foregroundStyle(Color.rvRed)
+                    }
+                    .foregroundStyle(Color.rvText)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 145)
+        }
+    }
+
     // MARK: - Editable text fields
 
     private var detailsSection: some View {
@@ -156,12 +245,28 @@ struct EditProfileView: View {
                 capitalization: .words
             )
             field(
+                title: "Handle",
+                text: $draft.handle,
+                placeholder: "@yourhandle",
+                icon: "at",
+                keyboard: .default,
+                capitalization: .never
+            )
+            field(
                 title: "Email",
                 text: $draft.email,
                 placeholder: "you@email.com",
                 icon: "envelope",
                 keyboard: .emailAddress,
                 capitalization: .never
+            )
+            field(
+                title: "City",
+                text: $draft.city,
+                placeholder: "Your city",
+                icon: "location",
+                keyboard: .default,
+                capitalization: .words
             )
             field(
                 title: "Phone number",
@@ -263,11 +368,20 @@ struct EditProfileView: View {
         )
     }
 
+    private var artistsSection: some View {
+        multiSelectSection(
+            title: "ARTISTS AND DJS",
+            subtitle: "Choose the artists you want to match on",
+            options: model.artistOptions,
+            selection: $draft.favoriteArtists
+        )
+    }
+
     // MARK: - Venue / vibe (multi-select)
 
-    private var venueSection: some View {
+    private var partyStyleSection: some View {
         multiSelectSection(
-            title: "VENUE",
+            title: "PARTY STYLES",
             subtitle: "Where you like to lose yourself",
             options: model.venueOptions,
             selection: $draft.venues
@@ -327,8 +441,8 @@ struct EditProfileView: View {
     // MARK: - Save
 
     private var saveButton: some View {
-        Button { save() } label: {
-            Text("Save changes")
+        Button { Task { await save() } } label: {
+            Text(model.isSaving ? "Saving…" : "Save changes")
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(Color.white)
                 .frame(maxWidth: .infinity)
@@ -336,6 +450,7 @@ struct EditProfileView: View {
                 .background(Color.rvRed, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
+        .disabled(model.isSaving)
         .padding(.top, 4)
     }
 
@@ -343,9 +458,21 @@ struct EditProfileView: View {
 
     /// Commit the draft into the shared model. Because ProfileViewModel is
     /// @Observable, the Profile tab re-renders with the new values immediately.
-    private func save() {
-        model.profile = draft
+    private func save() async {
+        guard await model.save(draft) else {
+            saveError = model.errorMessage ?? "Please check your connection and try again."
+            model.errorMessage = nil
+            return
+        }
         dismiss()
+    }
+
+    private func loadPhoto(_ item: PhotosPickerItem?, into keyPath: WritableKeyPath<UserProfile, Data?>) {
+        guard let item else { return }
+        Task {
+            guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+            await MainActor.run { draft[keyPath: keyPath] = data }
+        }
     }
 }
 

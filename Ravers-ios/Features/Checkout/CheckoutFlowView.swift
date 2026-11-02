@@ -3,22 +3,38 @@
 //  Raverse-ios
 //
 //  The "Order now" flow, presented from the product screen: Address details →
-//  Payment → Confirmation. On payment the order is written into the shared
-//  VaultStore so it appears under the Vault's ORDERS tab.
+//  Payment preference → Confirmation. Supabase stores the order before the
+//  confirmation appears. Payment stays pending until confirmed by a payment backend.
 //
 
 import SwiftUI
 
 /// Hosts the checkout navigation stack. `onFinish` closes the whole flow.
 struct CheckoutFlowView: View {
-    let product: Product
-    let size: String?
-    let quantity: Int
+    let items: [VaultItem]
+    let fromVault: Bool
     let onFinish: () -> Void
+    let onOrderCompleted: () -> Void
+
+    init(product: Product, size: String?, quantity: Int,
+         onFinish: @escaping () -> Void, onOrderCompleted: @escaping () -> Void) {
+        self.init(items: [VaultItem(id: VaultItem.key(productID: product.id, size: size),
+                                   product: product, size: size, quantity: quantity)],
+                  fromVault: false, onFinish: onFinish, onOrderCompleted: onOrderCompleted)
+    }
+
+    init(items: [VaultItem], fromVault: Bool,
+         onFinish: @escaping () -> Void, onOrderCompleted: @escaping () -> Void) {
+        self.items = items
+        self.fromVault = fromVault
+        self.onFinish = onFinish
+        self.onOrderCompleted = onOrderCompleted
+    }
 
     var body: some View {
         NavigationStack {
-            AddressView(product: product, size: size, quantity: quantity, onFinish: onFinish)
+            AddressView(items: items, fromVault: fromVault,
+                        onFinish: onFinish, onOrderCompleted: onOrderCompleted)
         }
     }
 }
@@ -26,10 +42,10 @@ struct CheckoutFlowView: View {
 // MARK: - Address details
 
 private struct AddressView: View {
-    let product: Product
-    let size: String?
-    let quantity: Int
+    let items: [VaultItem]
+    let fromVault: Bool
     let onFinish: () -> Void
+    let onOrderCompleted: () -> Void
 
     @State private var name = ""
     @State private var phone = ""
@@ -58,7 +74,7 @@ private struct AddressView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     CheckoutHeader(title: "DELIVERY ADDRESS", step: 1, onClose: onFinish)
 
-                    CheckoutSummaryStrip(product: product, size: size, quantity: quantity)
+                    CheckoutItemsSummary(items: items)
 
                     VStack(spacing: 14) {
                         field("Full name", text: $name, placeholder: "Rehan Malhotra")
@@ -83,8 +99,10 @@ private struct AddressView: View {
             }
         }
         .navigationDestination(isPresented: $goToPayment) {
-            PaymentView(product: product, size: size, quantity: quantity,
-                        address: address, onFinish: onFinish)
+            PaymentView(items: items, fromVault: fromVault,
+                        address: address,
+                        onFinish: onFinish,
+                        onOrderCompleted: onOrderCompleted)
         }
     }
 
@@ -117,33 +135,23 @@ private struct AddressView: View {
 // MARK: - Payment
 
 private struct PaymentView: View {
-    let product: Product
-    let size: String?
-    let quantity: Int
+    let items: [VaultItem]
+    let fromVault: Bool
     let address: ShippingAddress
     let onFinish: () -> Void
+    let onOrderCompleted: () -> Void
 
     @Environment(VaultStore.self) private var vault
 
-    enum Method: String, CaseIterable { case upi = "UPI", card = "Card" }
-    @State private var method: Method = .upi
-    @State private var upiID = ""
-    @State private var cardNumber = ""
-    @State private var cardName = ""
-    @State private var expiry = ""
+    @Environment(PaymentMethodStore.self) private var payments
+    @State private var selectedMethodID: UUID?
+    @State private var paymentDraft = PaymentMethodDraft()
     @State private var placedOrder: Order?
+    @State private var requestID = UUID()
+    @State private var isPlacingOrder = false
+    @State private var errorMessage: String?
 
-    private var total: Int { product.price * quantity }
-
-    private var isValid: Bool {
-        switch method {
-        case .upi:
-            return upiID.contains("@") && upiID.count > 3
-        case .card:
-            return cardNumber.filter(\.isNumber).count >= 12 &&
-                   !cardName.trimmingCharacters(in: .whitespaces).isEmpty
-        }
-    }
+    private var total: Int { items.reduce(0) { $0 + $1.total } }
 
     var body: some View {
         ZStack {
@@ -153,21 +161,15 @@ private struct PaymentView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     CheckoutHeader(title: "PAYMENT", step: 2, onClose: onFinish)
 
-                    CheckoutSummaryStrip(product: product, size: size, quantity: quantity)
+                    CheckoutItemsSummary(items: items)
 
                     deliveringTo
 
-                    methodPicker
+                    CheckoutPaymentChoice(selectedID: $selectedMethodID, draft: $paymentDraft)
 
-                    VStack(spacing: 14) {
-                        if method == .upi {
-                            field("UPI ID", text: $upiID, placeholder: "name@bank", keyboard: .emailAddress)
-                        } else {
-                            field("Card number", text: $cardNumber, placeholder: "1234 5678 9012 3456", keyboard: .numberPad)
-                            field("Name on card", text: $cardName, placeholder: "REHAN MALHOTRA")
-                            field("Expiry (MM/YY)", text: $expiry, placeholder: "08/28", keyboard: .numbersAndPunctuation)
-                        }
-                    }
+                    Text("Your order will be saved with payment pending. No payment is collected on this screen.")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.rvTextMuted)
 
                     totalRow
                 }
@@ -179,12 +181,22 @@ private struct PaymentView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .safeAreaInset(edge: .bottom) {
-            CheckoutBottomButton(title: "PAY " + priceString(total), enabled: isValid) {
-                placeOrder()
+            CheckoutBottomButton(title: isPlacingOrder ? "SAVING ORDER…" : "PLACE ORDER · " + priceString(total),
+                                 enabled: !items.isEmpty && !isPlacingOrder && !vault.isBusy && !payments.isBusy && paymentIsValid) {
+                Task { await placeOrder() }
             }
         }
+        .disabled(isPlacingOrder)
+        .interactiveDismissDisabled(isPlacingOrder)
+        .navigationBarBackButtonHidden(isPlacingOrder)
+        .alert("Couldn't place order", isPresented: Binding(
+            get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } }
+        )) { Button("OK", role: .cancel) { } } message: { Text(errorMessage ?? "") }
         .navigationDestination(item: $placedOrder) { order in
-            OrderConfirmedView(order: order, onFinish: onFinish)
+            OrderConfirmedView(order: order) {
+                onOrderCompleted()
+                onFinish()
+            }
         }
     }
 
@@ -212,26 +224,11 @@ private struct PaymentView: View {
         )
     }
 
-    private var methodPicker: some View {
-        HStack(spacing: 0) {
-            ForEach(Method.allCases, id: \.self) { value in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.18)) { method = value }
-                } label: {
-                    Text(value.rawValue)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(method == value ? .white : Color.rvTextMuted)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 40)
-                        .background(method == value ? AnyShapeStyle(Color.rvRed) : AnyShapeStyle(Color.clear),
-                                   in: Capsule())
-                }
-                .buttonStyle(.plain)
-            }
+    private var paymentIsValid: Bool {
+        if let selectedMethodID, let method = payments.methods.first(where: { $0.id == selectedMethodID }) {
+            return (try? PaymentMethodDraft(method: method).value()) != nil
         }
-        .padding(4)
-        .background(Color.rvSurface, in: Capsule())
-        .overlay(Capsule().stroke(Color.rvBorder, lineWidth: 1))
+        return selectedMethodID == nil && (try? paymentDraft.value()) != nil
     }
 
     private var totalRow: some View {
@@ -247,54 +244,19 @@ private struct PaymentView: View {
         .padding(.top, 4)
     }
 
-    private func field(
-        _ title: String,
-        text: Binding<String>,
-        placeholder: String,
-        keyboard: UIKeyboardType = .default
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title.uppercased())
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .tracking(1)
-                .foregroundStyle(Color.rvTextMuted)
-            TextField("", text: text, prompt: Text(placeholder).foregroundStyle(Color.rvTextMuted.opacity(0.6)))
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(Color.rvText)
-                .keyboardType(keyboard)
-                .autocorrectionDisabled()
-                .padding(.horizontal, 14)
-                .frame(height: 48)
-                .background(Color.rvSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.rvBorder, lineWidth: 1)
-                )
+    private func placeOrder() async {
+        guard !isPlacingOrder else { return }
+        isPlacingOrder = true
+        defer { isPlacingOrder = false }
+        do {
+            let method = try await payments.resolve(selectedID: selectedMethodID, draft: paymentDraft)
+            selectedMethodID = method.id
+            placedOrder = try await vault.placeOrder(id: requestID, items: items, address: address,
+                                                     paymentMethod: method.kind.rawValue,
+                                                     fromVault: fromVault, paymentMethodID: method.id)
+        } catch {
+            errorMessage = error.localizedDescription
         }
-    }
-
-    private var paymentLabel: String {
-        switch method {
-        case .upi:  return "UPI · \(upiID)"
-        case .card: return "Card •••• " + String(cardNumber.filter(\.isNumber).suffix(4))
-        }
-    }
-
-    private func placeOrder() {
-        guard isValid else { return }
-        let order = Order(
-            id: UUID().uuidString,
-            product: product,
-            size: size,
-            quantity: quantity,
-            total: total,
-            address: address,
-            paymentLabel: paymentLabel,
-            placedAt: .now,
-            status: "Placed"
-        )
-        vault.placeOrder(order)
-        placedOrder = order
     }
 
     private func priceString(_ value: Int) -> String {
@@ -324,14 +286,20 @@ private struct OrderConfirmedView: View {
                     .tracking(1.5)
                     .foregroundStyle(Color.rvText)
 
-                Text("\(order.product.name) is on its way to \(order.address.name.components(separatedBy: " ").first ?? order.address.name). Track it under Vault → Orders.")
+                Text("Your order has been saved. Payment is pending. View your items and delivery details under Vault → Orders.")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color.rvTextMuted)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
 
+                Text("Order reference: \(order.id)")
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.rvTextMuted)
+                    .textSelection(.enabled)
+                    .padding(.horizontal, 24)
+
                 VStack(spacing: 6) {
-                    Text("PAID " + priceString(order.total))
+                    Text("ORDER TOTAL " + priceString(order.total))
                         .font(.system(size: 13, weight: .heavy, design: .monospaced))
                         .foregroundStyle(Color.rvText)
                     Text(order.paymentLabel)
@@ -368,7 +336,7 @@ private struct OrderConfirmedView: View {
 
 // MARK: - Shared checkout pieces
 
-private struct CheckoutHeader: View {
+struct CheckoutHeader: View {
     let title: String
     let step: Int
     let onClose: () -> Void
@@ -398,6 +366,18 @@ private struct CheckoutHeader: View {
                 .font(.system(size: 13, weight: .heavy, design: .monospaced))
                 .foregroundStyle(Color.rvTextMuted)
                 .frame(width: 40, height: 40)
+        }
+    }
+}
+
+private struct CheckoutItemsSummary: View {
+    let items: [VaultItem]
+
+    var body: some View {
+        VStack(spacing: 10) {
+            ForEach(items) { item in
+                CheckoutSummaryStrip(product: item.product, size: item.size, quantity: item.quantity)
+            }
         }
     }
 }
@@ -442,7 +422,7 @@ private struct CheckoutSummaryStrip: View {
     }
 }
 
-private struct CheckoutBottomButton: View {
+struct CheckoutBottomButton: View {
     let title: String
     let enabled: Bool
     let action: () -> Void
@@ -474,7 +454,9 @@ private struct CheckoutBottomButton: View {
                          imageName: "hoody", description: nil, sizes: ["S", "M", "L"]),
         size: "M",
         quantity: 1,
-        onFinish: {}
+        onFinish: {},
+        onOrderCompleted: {}
     )
     .environment(VaultStore())
+    .environment(PaymentMethodStore())
 }

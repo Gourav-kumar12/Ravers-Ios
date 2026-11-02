@@ -15,19 +15,21 @@ struct OTPTextField: View {
                 .textContentType(.oneTimeCode)
                 .focused($focused)
                 .foregroundColor(.clear)
-                .accentColor(.clear)
+                .tint(.clear)
+                .accessibilityLabel("6-digit verification code")
+                .accessibilityValue("\(otp.count) of 6 digits entered")
                 .onChange(of: otp) { _, value in
 
                     // Keep only digits, capped at 6. Guards against paste,
                     // hardware keyboards, and autofill inserting non-numbers.
-                    let cleaned = String(value.filter(\.isNumber).prefix(6))
+                    let cleaned = String(value.filter { $0.isASCII && $0.isNumber }.prefix(6))
                     if cleaned != otp {
                         otp = cleaned
                     }
 
                 }
 
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
 
                 ForEach(0..<6, id: \.self) { index in
 
@@ -40,8 +42,8 @@ struct OTPTextField: View {
                                 : Color.white.opacity(0.12),
                                 lineWidth: 1.5
                             )
-                            .frame(width: 52,
-                                   height: 68)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 60)
 
                         Text(character(at: index))
                             .font(.title.bold())
@@ -52,8 +54,11 @@ struct OTPTextField: View {
                 }
 
             }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
 
         }
+        .onAppear { focused = true }
         .contentShape(Rectangle())
         .onTapGesture {
 

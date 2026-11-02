@@ -13,12 +13,20 @@ struct EventDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(VaultStore.self) private var vault
+    @Environment(\.showVaultPasses) private var showVaultPasses
     @State private var isSaved = false
-    /// Set when the user books a pass on this screen (also unlocks Partner).
-    @State private var justBooked = false
+    @State private var showBooking = false
+    @State private var bookingWasSaved = false
+    @State private var showPasses = false
 
-    /// True if the user already holds a pass for this event, or just booked one.
-    private var hasPass: Bool { event.heldPass != nil || justBooked }
+    private var savedTicket: Ticket? { vault.ticket(for: event.id) }
+    private var hasPass: Bool { savedTicket != nil }
+    private var availableTiers: [Pass] {
+        if event.passes.isEmpty {
+            return [Pass(id: "general", name: "General admission", detail: "Entry", price: event.fromPrice)]
+        }
+        return event.passes.filter { ($0.remaining ?? 1) > 0 }.sorted { $0.price < $1.price }
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -29,10 +37,17 @@ struct EventDetailView: View {
                     dateTimeRow
                     title
                     locationRow
-                    if let pass = event.heldPass { passActiveCard(pass) }
+                    if let ticket = savedTicket {
+                        if ticket.isActive, let code = ticket.code {
+                            passActiveCard(HeldPass(tierName: ticket.tier.name, entries: ticket.quantity, code: code))
+                        } else {
+                            Text("\(ticket.statusLabel). View this booking under Vault → Passes.")
+                                .font(.subheadline).foregroundStyle(Color.rvTextMuted)
+                        }
+                    }
                     if !event.lineup.isEmpty { lineupSection }
                     if let about = event.about { aboutSection(about) }
-                    if let chat = event.chatPreview { chatCard(chat) }
+                    eventChatEntry
                 }
                 .padding(.horizontal, 18)
                 .padding(.bottom, 32)
@@ -43,20 +58,35 @@ struct EventDetailView: View {
         .ignoresSafeArea(edges: .top)
         .toolbar(.hidden, for: .navigationBar)
         .safeAreaInset(edge: .bottom) { passBar }
+        .fullScreenCover(isPresented: $showBooking, onDismiss: {
+            if bookingWasSaved {
+                bookingWasSaved = false
+                openPasses()
+            }
+        }) {
+            TicketCheckoutFlowView(event: event, tiers: availableTiers,
+                onFinish: { showBooking = false },
+                onCompleted: { bookingWasSaved = true; showBooking = false })
+        }
+        .navigationDestination(isPresented: $showPasses) {
+            VaultView(initialTab: .passes)
+        }
     }
 
     // MARK: - Get pass CTA
 
     private var passBar: some View {
         Button {
-            guard !hasPass else { return }
-            withAnimation(.easeInOut(duration: 0.2)) { justBooked = true }
-            vault.bookTicket()
+            if hasPass {
+                openPasses()
+                return
+            }
+            showBooking = true
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: hasPass ? "checkmark.circle.fill" : "ticket.fill")
                     .font(.system(size: 16, weight: .bold))
-                Text(hasPass ? "PASS SECURED" : "GET PASS · FROM ₹\(event.fromPrice)")
+                Text(passButtonTitle)
                     .font(.system(size: 15, weight: .heavy))
                     .tracking(0.8)
             }
@@ -71,11 +101,26 @@ struct EventDetailView: View {
             )
         }
         .buttonStyle(.plain)
-        .disabled(hasPass)
+        .disabled(!hasPass && (availableTiers.isEmpty || event.date <= .now || vault.isBusy))
         .padding(.horizontal, 18)
         .padding(.top, 10)
         .padding(.bottom, 8)
         .background(.ultraThinMaterial)
+    }
+
+    private var passButtonTitle: String {
+        if savedTicket != nil { return "VIEW IN VAULT · PASSES" }
+        if event.date <= .now { return "EVENT ENDED" }
+        guard let tier = availableTiers.first else { return "SOLD OUT" }
+        return "GET PASS · FROM ₹\(tier.price)"
+    }
+
+    private func openPasses() {
+        if let showVaultPasses {
+            showVaultPasses()
+        } else {
+            showPasses = true
+        }
     }
 
     // MARK: - Hero
@@ -299,6 +344,24 @@ struct EventDetailView: View {
 
     // MARK: - Chat preview
 
+    private var eventChatEntry: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("EVENT GROUP", systemImage: "bubble.left.and.bubble.right.fill")
+                .font(.headline).foregroundStyle(Color.rvText)
+            Text(savedTicket?.grantsEventChat == true
+                 ? "Meet the other ticket holders heading to this event."
+                 : "Buy a ticket to join this event's group. Your access opens after payment is confirmed.")
+                .font(.subheadline).foregroundStyle(Color.rvTextMuted)
+            NavigationLink { EventChatView(event: event) } label: {
+                Label("Open event group", systemImage: "person.3.fill")
+                    .font(.subheadline.bold()).foregroundStyle(Color.rvRed)
+            }
+            .disabled(savedTicket?.grantsEventChat != true)
+        }
+        .padding(18).frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.rvSurface, in: RoundedRectangle(cornerRadius: 18))
+    }
+
     private func chatCard(_ chat: ChatPreview) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -389,5 +452,6 @@ struct EventDetailView: View {
             )
         )
         .environment(VaultStore())
+        .environment(PaymentMethodStore())
     }
 }
